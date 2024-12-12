@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.backend.db_depends import get_db
 from typing import Annotated
 from app.models.user import User
+from app.models.task import Task
+from app.routers.task import Task
 from app.schemas import CreateUser, UpdateUser
 from sqlalchemy import insert, select, update, delete
 from slugify import slugify
@@ -23,12 +25,7 @@ async def user_by_id(user_id: int, db: Annotated[Session, Depends(get_db)]):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User was not found")
     return user
-# Функция craete_user ('/create'):
-# Для добавления используйте ранее импортированную функцию insert.
-# Дополнительно принимает модель CreateUser.
-# Подставляет в таблицу User запись значениями указанными в CreateUser.
-# В конце возвращает словарь {'status_code': status.HTTP_201_CREATED, 'transaction': 'Successful'}
-# Обработку исключения существующего пользователя по user_id или username можете сделать по желанию.
+
 @router.post('/create')
 async def create_user(new_user: CreateUser, db: Annotated[Session, Depends(get_db)]):
     slug = slugify(new_user.username)
@@ -69,3 +66,12 @@ async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="User was not found")
+
+@router.get("/{user_id}/tasks")
+async def tasks_by_user_id(user_id: int, db: Annotated[Session, Depends(get_db)]):
+    tasks = db.scalars(select(Task).where(Task.user_id == user_id)).all()
+    if tasks is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No tasks found for this user")
+    return tasks
